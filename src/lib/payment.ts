@@ -182,7 +182,7 @@ export async function preparePayment(
   horizon: PaymentHorizonClient = client(),
 ): Promise<PaymentResult<PaymentReview>> {
   try {
-    debugPaymentStep('Preparing started', { sender, recipient, amount })
+    debugPaymentStep('Preparing started')
     const [source, fee] = await Promise.all([
       withPaymentTimeout(
         'Sender account loaded',
@@ -194,7 +194,7 @@ export async function preparePayment(
         horizon.loadAccount(recipient),
       ),
     ])
-    debugPaymentStep('Transaction build started', { sender, recipient, amount })
+    debugPaymentStep('Transaction build started')
     const transaction = new TransactionBuilder(
       source as Horizon.AccountResponse,
       { fee: String(fee), networkPassphrase: Networks.TESTNET },
@@ -209,9 +209,6 @@ export async function preparePayment(
       .setTimeout(TRANSACTION_TIMEOUT_SECONDS)
       .build()
     debugPaymentStep('Transaction built', {
-      sender,
-      recipient,
-      amount,
       fee,
     })
 
@@ -242,7 +239,6 @@ export async function signPreparedPayment(
 ): Promise<PaymentResult<string>> {
   try {
     debugPaymentStep('Wallet revalidation started', {
-      sender: review.sender,
       network: review.network,
     })
     const [address, network] = await Promise.all([
@@ -255,7 +251,7 @@ export async function signPreparedPayment(
     if (network.error || network.networkPassphrase !== Networks.TESTNET) {
       return failure('wrong-network', 'Switch Freighter back to Stellar Testnet and review again.')
     }
-    debugPaymentStep('Waiting for Freighter', { sender: review.sender })
+    debugPaymentStep('Waiting for Freighter')
     const signed = await withPaymentTimeout(
       'Freighter signed',
       signTransaction(review.unsignedXdr, {
@@ -286,7 +282,7 @@ export async function submitSignedPayment(
 ): Promise<PaymentResult<string>> {
   try {
     const transaction = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET)
-    debugPaymentStep('Submitted to Horizon', { signedXdrLength: signedXdr.length })
+    debugPaymentStep('Submitting to Horizon')
     const response = await withPaymentTimeout(
       'Horizon submission',
       horizon.submitTransaction(transaction),
@@ -294,7 +290,7 @@ export async function submitSignedPayment(
     if (!response.hash || !/^[a-fA-F0-9]{64}$/.test(response.hash)) {
       return failure('submission', 'Horizon did not return a valid transaction hash.')
     }
-    debugPaymentStep('Horizon submission confirmed', { hash: response.hash })
+    debugPaymentStep('Horizon submission confirmed')
     return { ok: true, value: response.hash.toLowerCase() }
   } catch (error) {
     if (error instanceof PaymentStepTimeoutError) {

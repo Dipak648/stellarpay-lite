@@ -40,6 +40,21 @@ export type WalletChangeResult =
 const GENERIC_ERROR_MESSAGE =
   'Freighter could not complete the request. Please try again.'
 const REJECTED_ERROR_CODE = -4
+const FREIGHTER_TIMEOUT_MS = 15_000
+
+async function withFreighterTimeout<T>(promise: Promise<T>): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined
+  try {
+    return await Promise.race([
+      promise,
+      new Promise<T>((_, reject) => {
+        timer = setTimeout(() => reject(new Error('Freighter request timed out')), FREIGHTER_TIMEOUT_MS)
+      }),
+    ])
+  } finally {
+    if (timer) clearTimeout(timer)
+  }
+}
 
 function safeErrorMessage(error?: FreighterError): string {
   if (error?.code === REJECTED_ERROR_CODE) {
@@ -65,7 +80,7 @@ export function isTestnet(networkPassphrase: string): boolean {
 
 export async function checkFreighterAvailability(): Promise<AvailabilityResult> {
   try {
-    const result = await isConnected()
+    const result = await withFreighterTimeout(isConnected())
 
     if (result.error) {
       return { status: 'error', message: GENERIC_ERROR_MESSAGE }
@@ -79,7 +94,7 @@ export async function checkFreighterAvailability(): Promise<AvailabilityResult> 
 
 export async function connectFreighter(): Promise<ConnectionResult> {
   try {
-    const access = await requestAccess()
+    const access = await withFreighterTimeout(requestAccess())
 
     if (access.error) {
       return access.error.code === REJECTED_ERROR_CODE
@@ -87,7 +102,7 @@ export async function connectFreighter(): Promise<ConnectionResult> {
         : { status: 'error', message: safeErrorMessage(access.error) }
     }
 
-    const addressResult = await getAddress()
+    const addressResult = await withFreighterTimeout(getAddress())
     if (addressResult.error || !addressResult.address) {
       return {
         status: 'error',
@@ -95,7 +110,7 @@ export async function connectFreighter(): Promise<ConnectionResult> {
       }
     }
 
-    const networkResult = await getNetworkDetails()
+    const networkResult = await withFreighterTimeout(getNetworkDetails())
     if (networkResult.error || !networkResult.networkPassphrase) {
       return {
         status: 'error',

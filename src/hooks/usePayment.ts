@@ -80,7 +80,7 @@ export function usePayment(input: {
 
   const reviewPayment = useCallback(async (recipient: string, amount: string) => {
     if (busyRef.current) return
-    logStep('Review started', { recipientLength: recipient.length, amount })
+    logStep('Review started', { recipientLength: recipient.length })
     const validation = validatePayment({
       sender,
       recipient,
@@ -100,37 +100,36 @@ export function usePayment(input: {
     setSuccess(null)
     setStatus('preparing')
     logStep('Preparing started')
-    const prepared = await preparePayment(
-      sender!,
-      recipient.trim(),
-      amount.trim(),
-    )
-    logStep('Preparing finished', { ok: prepared.ok })
+    try {
+      const prepared = await preparePayment(
+        sender!,
+        recipient.trim(),
+        amount.trim(),
+      )
+      logStep('Preparing finished', { ok: prepared.ok })
+      busyRef.current = false
+      if (!mountedRef.current) return
 
-busyRef.current = false
+      if (!prepared.ok) {
+        logStep('Preparing failed', { code: prepared.code })
+        setFailure(prepared)
+        setStatus('failure')
+        return
+      }
 
-console.log("mountedRef.current =", mountedRef.current)
-
-if (!mountedRef.current) return
-
-console.log("After mountedRef check")
-
-if (!prepared.ok) {
-  console.log("preparePayment failed:", prepared.code)
-
-  logStep('Preparing failed', { code: prepared.code })
-  setFailure(prepared)
-  setStatus('failure')
-  return
-}
-
-console.log("Calling setReview()")
-setReview(prepared.value)
-
-console.log("Calling setStatus('reviewing')")
-setStatus('reviewing')
-
-console.log("Status changed to reviewing")
+      setReview(prepared.value)
+      setStatus('reviewing')
+    } catch {
+      busyRef.current = false
+      if (!mountedRef.current) return
+      const unexpected: PaymentFailure = {
+        ok: false,
+        code: 'network',
+        message: 'The payment could not be prepared. Please try again.',
+      }
+      setFailure(unexpected)
+      setStatus('failure')
+    }
   }, [balance, connected, logStep, sender])
 
   const cancelReview = useCallback(() => {
@@ -162,7 +161,20 @@ console.log("Status changed to reviewing")
     busyRef.current = true
     setStatus('preparing')
     logStep('Preparing before Freighter')
-    const fresh = await preparePayment(review.sender, review.recipient, review.amount)
+    let fresh: Awaited<ReturnType<typeof preparePayment>>
+    try {
+      fresh = await preparePayment(review.sender, review.recipient, review.amount)
+    } catch {
+      busyRef.current = false
+      if (!mountedRef.current) return
+      setFailure({
+        ok: false,
+        code: 'network',
+        message: 'The payment could not be prepared. Please try again.',
+      })
+      setStatus('failure')
+      return
+    }
     logStep('Preparing before Freighter finished', { ok: fresh.ok })
     if (!fresh.ok) {
       busyRef.current = false
@@ -174,7 +186,16 @@ console.log("Status changed to reviewing")
 
     setStatus('awaiting-signature')
     logStep('Waiting for Freighter')
-    const signed = await signPreparedPayment(fresh.value)
+    let signed: Awaited<ReturnType<typeof signPreparedPayment>>
+    try {
+      signed = await signPreparedPayment(fresh.value)
+    } catch {
+      busyRef.current = false
+      if (!mountedRef.current) return
+      setFailure({ ok: false, code: 'submission', message: 'Freighter could not sign the payment.' })
+      setStatus('failure')
+      return
+    }
     logStep('Freighter step finished', { ok: signed.ok })
     if (!signed.ok) {
       busyRef.current = false
@@ -186,7 +207,16 @@ console.log("Status changed to reviewing")
 
     setStatus('submitting')
     logStep('Submitting to Horizon')
-    const submitted = await submitSignedPayment(signed.value)
+    let submitted: Awaited<ReturnType<typeof submitSignedPayment>>
+    try {
+      submitted = await submitSignedPayment(signed.value)
+    } catch {
+      busyRef.current = false
+      if (!mountedRef.current) return
+      setFailure({ ok: false, code: 'network', message: 'Submission could not be confirmed. It was not retried automatically.' })
+      setStatus('failure')
+      return
+    }
     logStep('Horizon submission finished', { ok: submitted.ok })
     busyRef.current = false
     if (!mountedRef.current) return

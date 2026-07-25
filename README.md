@@ -96,3 +96,9 @@ The wallet can connect, its Testnet status can be verified, its native XLM balan
 ## Testnet only
 
 StellarPay Lite is intended exclusively for the **Stellar Testnet** during development. Testnet assets have no real-world value. Never enter, share, request, or store a wallet secret key or recovery phrase in this application.
+
+## Safety and reliability
+
+Wallet requests are bounded by a timeout and are started only from explicit user actions. Horizon and Freighter failures are mapped to short, user-facing messages; raw extension responses, keys, recovery phrases, signed XDR, and account secrets are never displayed or written to production logs. The app uses an application-level error boundary so an unexpected rendering failure produces a safe recovery screen instead of a blank page.
+
+The payment flow rechecks the active public address and Testnet passphrase immediately before signing, prevents duplicate submissions, and never retries an ambiguous Horizon submission automatically. A successful result is shown only when Horizon returns a valid transaction hash.
