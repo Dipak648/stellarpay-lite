@@ -1,0 +1,118 @@
+:root {
+  color: #f7f5ff;
+  background: #060817;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  min-height: 100%;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  background:
+    radial-gradient(circle at 50% 0%, rgb(108 76 255 / 24%), transparent 42rem),
+    #060817;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+.app-shell {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  padding: 2rem 1rem;
+}
+
+.hero {
+  width: min(100%, 46rem);
+  padding: clamp(2rem, 6vw, 4.5rem);
+  text-align: center;
+  background: rgb(14 18 43 / 82%);
+  border: 1px solid rgb(147 124 255 / 28%);
+  border-radius: 1.5rem;
+  box-shadow: 0 1.5rem 5rem rgb(0 0 0 / 35%);
+  backdrop-filter: blur(1rem);
+}
+
+.network-badge {
+  display: inline-flex;
+  padding: 0.45rem 0.8rem;
+  color: #d8ceff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgb(112 76 255 / 18%);
+  border: 1px solid rgb(165 144 255 / 42%);
+  border-radius: 999px;
+}
+
+h1 {
+  margin: 1.25rem 0 0.75rem;
+  font-size: clamp(2.5rem, 9vw, 5rem);
+  line-height: 1;
+  letter-spacing: -0.055em;
+}
+
+.description {
+  max-width: 37rem;
+  margin: 0 auto;
+  color: #b9bdd1;
+  font-size: clamp(1rem, 2.5vw, 1.15rem);
+  line-height: 1.7;
+}
+
+.setup-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin: 2rem 0 0;
+  padding: 0.7rem 1rem;
+  color: #e9e4ff;
+  font-weight: 600;
+  background: #131836;
+  border-radius: 0.75rem;
+}
+
+.status-dot {
+  width: 0.6rem;
+  height: 0.6rem;
+  background: #9b7bff;
+  border-radius: 50%;
+  box-shadow: 0 0 0.8rem #8e6cff;
+}
+
+@media (max-width: 30rem) {
+  .app-shell {
+    align-items: start;
+    padding-top: 1rem;
+  }
+
+  .hero {
+    padding: 2.25rem 1.25rem;
+    border-radius: 1rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+  }
+}
