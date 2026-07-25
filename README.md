@@ -1,5 +1,7 @@
 # StellarPay Lite
 
+[![CI](https://github.com/Dipak648/stellarpay-lite/actions/workflows/ci.yml/badge.svg)](https://github.com/Dipak648/stellarpay-lite/actions/workflows/ci.yml)
+
 StellarPay Lite is a responsive payment dApp for the Stellar Testnet. The application lets users connect a Freighter wallet, view their native XLM balance, review a Testnet payment, sign it in Freighter, submit it once to Horizon, and see the resulting transaction feedback and hash.
 
 This repository currently contains the responsive interface, real Freighter connection flow, native XLM balance loading from Stellar Testnet, and the Testnet payment review/sign/submit flow.
@@ -88,6 +90,12 @@ npm run lint
 npm run build
 npm audit
 ```
+
+The final local verification currently passes **55 tests**. The suite covers mocked Freighter availability, Testnet verification, connect/disconnect and wallet changes, Horizon balance loading and stale-request handling, native XLM extraction, validation and review cancellation, explicit signing, submission errors, duplicate prevention, transaction receipts and copy actions, accessibility semantics, and the application error boundary. Freighter and Horizon are mocked in tests, so CI never opens a wallet popup, contacts a live network, or submits a transaction.
+
+## Continuous integration
+
+GitHub Actions runs on pushes to `main` and pull requests targeting `main`. The Ubuntu job uses Node.js 22, installs with `npm ci`, then runs lint, non-watch tests, coverage, and the production build. It has read-only repository permissions, cancels superseded runs, uses no secrets, and performs no deployment or real Stellar request.
 
 ## Current limitations
 

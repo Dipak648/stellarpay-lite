@@ -244,6 +244,7 @@ describe('StellarPay Lite wallet connection', () => {
     ).toBeInTheDocument()
   })
 
+
   it('responds to account and network changes without requesting access again', async () => {
     render(<App />)
     await connectWallet()
@@ -256,7 +257,7 @@ describe('StellarPay Lite wallet connection', () => {
         networkPassphrase: Networks.TESTNET,
       })
     })
-    expect(screen.getByTitle(SECOND_ADDRESS)).toHaveTextContent(
+    expect(await screen.findByTitle(SECOND_ADDRESS)).toHaveTextContent(
       'GBBBBB…BBBBM7',
     )
 

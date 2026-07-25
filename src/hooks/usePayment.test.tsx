@@ -99,6 +99,29 @@ describe('usePayment', () => {
     })
   })
 
+  it('cancels a prepared review without opening signing or submitting', async () => {
+    const refreshBalance = vi.fn(async () => undefined)
+    const { result } = renderHook(() =>
+      usePayment({
+        sender: SENDER,
+        networkPassphrase: Networks.TESTNET,
+        balance: '5.0000000',
+        connected: true,
+        refreshBalance,
+      }),
+    )
+
+    await act(async () => {
+      await result.current.reviewPayment(RECIPIENT, '1.2500000')
+    })
+    act(() => result.current.cancelReview())
+
+    expect(result.current.status).toBe('idle')
+    expect(result.current.review).toBeNull()
+    expect(paymentLib.signPreparedPayment).not.toHaveBeenCalled()
+    expect(paymentLib.submitSignedPayment).not.toHaveBeenCalled()
+  })
+
   it('blocks duplicate confirmation attempts while a payment is active', async () => {
     const refreshBalance = vi.fn(async () => undefined)
     const pending = deferred<{ ok: true; value: PaymentReview }>()
