@@ -1,4 +1,8 @@
-export function PaymentForm() {
+interface PaymentFormProps {
+  isWalletConnected: boolean
+}
+
+export function PaymentForm({ isWalletConnected }: PaymentFormProps) {
   return (
     <section className="card payment-card" aria-labelledby="payment-title">
       <div className="card-heading">
@@ -10,7 +14,7 @@ export function PaymentForm() {
       </div>
 
       <form>
-        <fieldset disabled aria-describedby="payment-help">
+        <fieldset aria-describedby="payment-help">
           <legend className="sr-only">XLM payment details</legend>
 
           <div className="field">
@@ -21,6 +25,7 @@ export function PaymentForm() {
               type="text"
               autoComplete="off"
               placeholder="G…"
+              disabled={!isWalletConnected}
             />
             <p className="field-hint">Enter a public Stellar account beginning with G.</p>
           </div>
@@ -36,18 +41,27 @@ export function PaymentForm() {
                 min="0"
                 step="any"
                 placeholder="0.00"
+                disabled={!isWalletConnected}
               />
               <span className="input-asset" aria-hidden="true">
                 XLM
               </span>
-              <button className="max-button" type="button">
+              <button
+                className="max-button"
+                type="button"
+                disabled={!isWalletConnected}
+              >
                 MAX
               </button>
             </div>
             <p className="field-hint">Choose an amount after connecting your wallet.</p>
           </div>
 
-          <button className="button button--primary button--full" type="submit">
+          <button
+            className="button button--primary button--full"
+            type="submit"
+            disabled
+          >
             Review Payment
           </button>
         </fieldset>
@@ -55,7 +69,9 @@ export function PaymentForm() {
 
       <p className="form-lock-note" id="payment-help">
         <span aria-hidden="true">◆</span>
-        Connect Freighter to unlock payment details.
+        {isWalletConnected
+          ? 'Payment review will be enabled in a later phase.'
+          : 'Connect Freighter to unlock payment details.'}
       </p>
     </section>
   )

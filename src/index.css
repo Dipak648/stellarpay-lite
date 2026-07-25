@@ -47,6 +47,10 @@ button {
   border: 0;
 }
 
+a {
+  color: inherit;
+}
+
 button,
 input {
   transition:
@@ -255,6 +259,27 @@ h2 {
   border-radius: 999px;
 }
 
+.status-pill--connected {
+  color: var(--green);
+  background: rgb(79 212 154 / 10%);
+  border-color: rgb(79 212 154 / 25%);
+}
+
+.status-pill--wrong-network,
+.status-pill--rejected,
+.status-pill--error {
+  color: var(--red);
+  background: rgb(255 109 122 / 9%);
+  border-color: rgb(255 109 122 / 22%);
+}
+
+.status-pill--checking,
+.status-pill--connecting {
+  color: var(--purple-400);
+  background: rgb(118 87 255 / 12%);
+  border-color: rgb(156 135 255 / 24%);
+}
+
 .asset-chip {
   color: #dcd4ff;
   background: rgb(118 87 255 / 14%);
@@ -274,8 +299,29 @@ h2 {
   box-shadow: 0 0.8rem 1.8rem rgb(84 54 209 / 22%);
 }
 
+.button--secondary {
+  color: #e8e4fa;
+  background: var(--navy-800);
+  border: 1px solid rgb(157 145 214 / 25%);
+}
+
 .button--full {
   width: 100%;
+}
+
+.button--stacked {
+  margin-top: 0.7rem;
+}
+
+.button-link {
+  display: grid;
+  place-items: center;
+  text-decoration: none;
+}
+
+.button:not(:disabled):hover,
+.button-link:hover {
+  filter: brightness(1.1);
 }
 
 .button:disabled,
@@ -289,6 +335,71 @@ h2 {
 
 .balance-card .card-copy {
   margin-bottom: 0;
+}
+
+.wallet-status {
+  min-height: 9.7rem;
+}
+
+.wallet-confirmation {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.8rem;
+  color: #c8f7e2;
+}
+
+.success-dot {
+  width: 0.55rem;
+  height: 0.55rem;
+  background: var(--green);
+  border-radius: 50%;
+  box-shadow: 0 0 0.65rem rgb(79 212 154 / 70%);
+}
+
+.address-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem;
+  background: #090d20;
+  border: 1px solid rgb(157 145 214 / 18%);
+  border-radius: 0.75rem;
+}
+
+.address-row code {
+  min-width: 0;
+  padding-left: 0.25rem;
+  overflow: hidden;
+  color: #e7e2fc;
+  font-size: 0.84rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copy-button {
+  min-height: 2.2rem;
+  margin-left: auto;
+  padding: 0.35rem 0.65rem;
+  color: #d4caff;
+  font-size: 0.74rem;
+  font-weight: 750;
+  background: rgb(118 87 255 / 16%);
+  border-radius: 0.55rem;
+}
+
+.copy-feedback {
+  min-height: 1.3rem;
+  margin: 0.35rem 0 0.25rem;
+  color: var(--green);
+  font-size: 0.74rem;
+}
+
+.session-note {
+  margin: 0.75rem 0 0;
+  color: #858ca5;
+  font-size: 0.72rem;
+  line-height: 1.5;
 }
 
 .balance-value {
