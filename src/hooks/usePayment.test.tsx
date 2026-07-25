@@ -137,6 +137,37 @@ describe('usePayment', () => {
     expect(refreshBalance).toHaveBeenCalledTimes(1)
   })
 
+  it('marks timeout failures explicitly and does not refresh the balance', async () => {
+    const refreshBalance = vi.fn(async () => undefined)
+    paymentLib.submitSignedPayment.mockResolvedValueOnce({
+      ok: false,
+      code: 'timeout',
+      message: 'The transaction expired. Review and sign a new payment.',
+    })
+
+    const { result } = renderHook(() =>
+      usePayment({
+        sender: SENDER,
+        networkPassphrase: Networks.TESTNET,
+        balance: '5.0000000',
+        connected: true,
+        refreshBalance,
+      }),
+    )
+
+    await act(async () => {
+      await result.current.reviewPayment(RECIPIENT, '1.2500000')
+    })
+
+    await act(async () => {
+      await result.current.confirmAndSign()
+    })
+
+    expect(result.current.status).toBe('timed-out')
+    expect(result.current.failure).toMatchObject({ code: 'timeout' })
+    expect(refreshBalance).not.toHaveBeenCalled()
+  })
+
   it('invalidates stale reviews when the wallet address changes', async () => {
     const refreshBalance = vi.fn(async () => undefined)
     const { result, rerender } = renderHook(

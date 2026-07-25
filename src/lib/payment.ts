@@ -13,10 +13,15 @@ import {
 import { getHorizonClient, type HorizonAccountClient } from './horizon'
 
 export const TRANSACTION_TIMEOUT_SECONDS = 180
+const PAYMENT_STEP_TIMEOUT_MS = 20_000
 
 export type PaymentErrorCode =
+  | 'empty-recipient'
   | 'invalid-recipient'
+  | 'empty-amount'
   | 'invalid-amount'
+  | 'non-positive-amount'
+  | 'too-many-decimals'
   | 'insufficient-balance'
   | 'same-account'
   | 'unfunded-destination'
@@ -57,6 +62,44 @@ const failure = (code: PaymentErrorCode, message: string): PaymentFailure => ({
   message,
 })
 
+const STRICT_AMOUNT_PATTERN = /^(?:0|[1-9]\d*)(?:\.\d{1,7})?$/
+const TOO_MANY_DECIMALS_PATTERN = /^(?:0|[1-9]\d*)\.\d{8,}$/
+
+function debugPaymentStep(step: string, details?: Record<string, unknown>) {
+  if (import.meta.env.DEV) {
+    console.debug(`[payment] ${step}`, details ?? '')
+  }
+}
+
+class PaymentStepTimeoutError extends Error {
+  constructor(step: string, timeoutMs: number) {
+    super(`${step} timed out after ${timeoutMs}ms`)
+    this.name = 'PaymentStepTimeoutError'
+  }
+}
+
+async function withPaymentTimeout<T>(
+  step: string,
+  promise: Promise<T>,
+  timeoutMs = PAYMENT_STEP_TIMEOUT_MS,
+): Promise<T> {
+  let timeoutId: ReturnType<typeof setTimeout> | null = null
+  const timeout = new Promise<T>((_resolve, reject) => {
+    timeoutId = setTimeout(
+      () => reject(new PaymentStepTimeoutError(step, timeoutMs)),
+      timeoutMs,
+    )
+  })
+
+  try {
+    return await Promise.race([promise, timeout])
+  } finally {
+    if (timeoutId !== null) {
+      clearTimeout(timeoutId)
+    }
+  }
+}
+
 export function isValidStellarAddress(address: string): boolean {
   try {
     Keypair.fromPublicKey(address)
@@ -67,7 +110,7 @@ export function isValidStellarAddress(address: string): boolean {
 }
 
 export function isValidAmount(amount: string): boolean {
-  return /^(?:0|[1-9]\d*)(?:\.\d{1,7})?$/.test(amount) && !/^0(?:\.0*)?$/.test(amount)
+  return STRICT_AMOUNT_PATTERN.test(amount) && compareDecimalStrings(amount, '0') > 0
 }
 
 function decimalUnits(value: string): bigint {
@@ -93,17 +136,32 @@ export function validatePayment(input: {
   if (!input.sender || !input.isTestnetConnected) {
     return failure('wrong-network', 'Connect Freighter on Stellar Testnet.')
   }
-  if (!recipient || !isValidStellarAddress(recipient)) {
+  if (!recipient) {
+    return failure('empty-recipient', 'Enter a recipient Stellar address.')
+  }
+  if (!isValidStellarAddress(recipient)) {
     return failure('invalid-recipient', 'Enter a valid Stellar G-address.')
   }
   if (recipient === input.sender) {
     return failure('same-account', 'The recipient must differ from the sender.')
   }
-  if (!amount || !isValidAmount(amount)) {
-    return failure('invalid-amount', 'Enter an amount greater than zero with at most seven decimal places.')
+  if (!amount) {
+    return failure('empty-amount', 'Enter an XLM amount to send.')
+  }
+  if (amount.startsWith('-')) {
+    return failure('non-positive-amount', 'Enter an amount greater than zero.')
+  }
+  if (TOO_MANY_DECIMALS_PATTERN.test(amount)) {
+    return failure('too-many-decimals', 'Enter no more than seven decimal places.')
+  }
+  if (!STRICT_AMOUNT_PATTERN.test(amount)) {
+    return failure('invalid-amount', 'Enter a valid decimal amount using digits only.')
+  }
+  if (compareDecimalStrings(amount, '0') <= 0) {
+    return failure('non-positive-amount', 'Enter an amount greater than zero.')
   }
   if (!input.balance || compareDecimalStrings(amount, input.balance) > 0) {
-    return failure('insufficient-balance', 'The amount exceeds the displayed XLM balance.')
+    return failure('insufficient-balance', 'The amount exceeds the spendable XLM balance shown above.')
   }
   return null
 }
@@ -124,11 +182,19 @@ export async function preparePayment(
   horizon: PaymentHorizonClient = client(),
 ): Promise<PaymentResult<PaymentReview>> {
   try {
+    debugPaymentStep('Preparing started', { sender, recipient, amount })
     const [source, fee] = await Promise.all([
-      horizon.loadAccount(sender),
-      horizon.fetchBaseFee(),
-      horizon.loadAccount(recipient),
+      withPaymentTimeout(
+        'Sender account loaded',
+        horizon.loadAccount(sender),
+      ),
+      withPaymentTimeout('Base fee loaded', horizon.fetchBaseFee()),
+      withPaymentTimeout(
+        'Recipient account loaded',
+        horizon.loadAccount(recipient),
+      ),
     ])
+    debugPaymentStep('Transaction build started', { sender, recipient, amount })
     const transaction = new TransactionBuilder(
       source as Horizon.AccountResponse,
       { fee: String(fee), networkPassphrase: Networks.TESTNET },
@@ -142,6 +208,12 @@ export async function preparePayment(
       )
       .setTimeout(TRANSACTION_TIMEOUT_SECONDS)
       .build()
+    debugPaymentStep('Transaction built', {
+      sender,
+      recipient,
+      amount,
+      fee,
+    })
 
     return {
       ok: true,
@@ -155,6 +227,9 @@ export async function preparePayment(
       },
     }
   } catch (error) {
+    if (error instanceof PaymentStepTimeoutError) {
+      return failure('timeout', error.message)
+    }
     if (error instanceof NotFoundError || (error instanceof NetworkError && error.response?.status === 404)) {
       return failure('unfunded-destination', 'The recipient is unfunded. A standard payment cannot create the account.')
     }
@@ -166,17 +241,28 @@ export async function signPreparedPayment(
   review: PaymentReview,
 ): Promise<PaymentResult<string>> {
   try {
-    const [address, network] = await Promise.all([getAddress(), getNetworkDetails()])
+    debugPaymentStep('Wallet revalidation started', {
+      sender: review.sender,
+      network: review.network,
+    })
+    const [address, network] = await Promise.all([
+      withPaymentTimeout('Freighter address revalidated', getAddress()),
+      withPaymentTimeout('Freighter network revalidated', getNetworkDetails()),
+    ])
     if (address.error || address.address !== review.sender) {
       return failure('account-changed', 'The active Freighter account changed. Review the payment again.')
     }
     if (network.error || network.networkPassphrase !== Networks.TESTNET) {
       return failure('wrong-network', 'Switch Freighter back to Stellar Testnet and review again.')
     }
-    const signed = await signTransaction(review.unsignedXdr, {
-      networkPassphrase: Networks.TESTNET,
-      address: review.sender,
-    })
+    debugPaymentStep('Waiting for Freighter', { sender: review.sender })
+    const signed = await withPaymentTimeout(
+      'Freighter signed',
+      signTransaction(review.unsignedXdr, {
+        networkPassphrase: Networks.TESTNET,
+        address: review.sender,
+      }),
+    )
     if (signed.error) {
       return signed.error.code === -4
         ? failure('rejected', 'The signing request was rejected in Freighter.')
@@ -186,7 +272,10 @@ export async function signPreparedPayment(
       return failure('account-changed', 'Freighter returned a different signing account.')
     }
     return { ok: true, value: signed.signedTxXdr }
-  } catch {
+  } catch (error) {
+    if (error instanceof PaymentStepTimeoutError) {
+      return failure('timeout', error.message)
+    }
     return failure('submission', 'Freighter could not sign the payment.')
   }
 }
@@ -197,12 +286,20 @@ export async function submitSignedPayment(
 ): Promise<PaymentResult<string>> {
   try {
     const transaction = TransactionBuilder.fromXDR(signedXdr, Networks.TESTNET)
-    const response = await horizon.submitTransaction(transaction)
+    debugPaymentStep('Submitted to Horizon', { signedXdrLength: signedXdr.length })
+    const response = await withPaymentTimeout(
+      'Horizon submission',
+      horizon.submitTransaction(transaction),
+    )
     if (!response.hash || !/^[a-fA-F0-9]{64}$/.test(response.hash)) {
       return failure('submission', 'Horizon did not return a valid transaction hash.')
     }
+    debugPaymentStep('Horizon submission confirmed', { hash: response.hash })
     return { ok: true, value: response.hash.toLowerCase() }
   } catch (error) {
+    if (error instanceof PaymentStepTimeoutError) {
+      return failure('timeout', error.message)
+    }
     if (error instanceof TransactionFailedError) {
       const codes = error.getResultCodes()
       if (codes.transaction === 'tx_bad_seq') {

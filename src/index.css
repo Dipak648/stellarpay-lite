@@ -619,6 +619,15 @@ fieldset {
   color: #c8f7e2;
 }
 
+.result-success {
+  margin: 0 0 0.35rem;
+  color: var(--green);
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .result-actions a,
 .result-actions button {
   padding: 0.5rem 0.7rem;
@@ -678,6 +687,10 @@ fieldset {
 .transaction-result--error .result-icon {
   color: var(--red);
   background: rgb(255 109 122 / 10%);
+}
+
+.transaction-result--timed-out {
+  border-left-color: var(--red);
 }
 
 .site-footer {

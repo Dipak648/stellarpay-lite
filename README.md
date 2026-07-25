@@ -17,13 +17,19 @@ When you select **Disconnect**, the app clears its own session state and stops w
 Payment entry is intentionally conservative:
 
 - the recipient address must be a valid Stellar G-address
+- empty recipient and empty amount fields are rejected before signing
 - the amount must be a strict decimal string with at most seven decimal places
+- zero or negative amounts are rejected
+- the amount cannot exceed the spendable balance shown in the app
 - the app builds exactly one native XLM payment operation
 - the review step happens before Freighter opens the signing prompt
 - Freighter signs only after you explicitly confirm the review
 - the signed transaction is submitted once to Horizon
+- repeated clicks are ignored while a submission is already in progress
 - ambiguous failures are not auto-resubmitted
 - the MAX button stays disabled until reserve-aware max calculation exists
+
+The transaction result card uses clear states for preparing, waiting for Freighter, submitting, successful, rejected by user, failed, and timed out. On success, it shows a green success message, the amount sent, the recipient address, the transaction hash, and a Stellar Expert Testnet link.
 
 The transaction result card shows the confirmed Testnet transaction hash, a copy button, and a link to the explorer for verification. In the current UI, that explorer link points to Stellar Expert on Testnet.
 

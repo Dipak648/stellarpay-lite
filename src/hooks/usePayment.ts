@@ -17,6 +17,7 @@ export type TransactionStatus =
   | 'submitting'
   | 'success'
   | 'rejected'
+  | 'timed-out'
   | 'failure'
 
 export interface PaymentSuccess {
@@ -50,9 +51,19 @@ export function usePayment(input: {
     : null
   const lastWalletKeyRef = useRef<string | null>(null)
 
-  useEffect(() => () => {
-    mountedRef.current = false
+   const logStep= useCallback((step: string, details?: Record<string, unknown>) => {
+    if (import.meta.env.DEV) {
+      console.warn(`[payment-ui] ${step}`, details ?? '')
+    }
   }, [])
+
+  useEffect(() => {
+  mountedRef.current = true
+
+  return () => {
+    mountedRef.current = false
+  }
+}, [])
 
   useEffect(() => {
     if (lastWalletKeyRef.current === walletKey) {
@@ -69,6 +80,7 @@ export function usePayment(input: {
 
   const reviewPayment = useCallback(async (recipient: string, amount: string) => {
     if (busyRef.current) return
+    logStep('Review started', { recipientLength: recipient.length, amount })
     const validation = validatePayment({
       sender,
       recipient,
@@ -77,6 +89,7 @@ export function usePayment(input: {
       isTestnetConnected: connected,
     })
     if (validation) {
+      logStep('Review validation failed', { code: validation.code })
       setFailure(validation)
       setStatus('failure')
       return
@@ -86,21 +99,39 @@ export function usePayment(input: {
     setFailure(null)
     setSuccess(null)
     setStatus('preparing')
+    logStep('Preparing started')
     const prepared = await preparePayment(
       sender!,
       recipient.trim(),
       amount.trim(),
     )
-    busyRef.current = false
-    if (!mountedRef.current) return
-    if (!prepared.ok) {
-      setFailure(prepared)
-      setStatus('failure')
-      return
-    }
-    setReview(prepared.value)
-    setStatus('reviewing')
-  }, [balance, connected, sender])
+    logStep('Preparing finished', { ok: prepared.ok })
+
+busyRef.current = false
+
+console.log("mountedRef.current =", mountedRef.current)
+
+if (!mountedRef.current) return
+
+console.log("After mountedRef check")
+
+if (!prepared.ok) {
+  console.log("preparePayment failed:", prepared.code)
+
+  logStep('Preparing failed', { code: prepared.code })
+  setFailure(prepared)
+  setStatus('failure')
+  return
+}
+
+console.log("Calling setReview()")
+setReview(prepared.value)
+
+console.log("Calling setStatus('reviewing')")
+setStatus('reviewing')
+
+console.log("Status changed to reviewing")
+  }, [balance, connected, logStep, sender])
 
   const cancelReview = useCallback(() => {
     if (busyRef.current) return
@@ -111,6 +142,7 @@ export function usePayment(input: {
 
   const confirmAndSign = useCallback(async () => {
     if (busyRef.current || !review) return
+    logStep('Confirmation started', { sender, recipient: review.recipient })
     const validation = validatePayment({
       sender,
       recipient: review.recipient,
@@ -119,6 +151,7 @@ export function usePayment(input: {
       isTestnetConnected: connected && networkPassphrase === TESTNET_PASSPHRASE,
     })
     if (validation) {
+      logStep('Confirmation validation failed', { code: validation.code })
       setFailure(validation)
       setStatus('failure')
       setReview(null)
@@ -128,30 +161,39 @@ export function usePayment(input: {
 
     busyRef.current = true
     setStatus('preparing')
+    logStep('Preparing before Freighter')
     const fresh = await preparePayment(review.sender, review.recipient, review.amount)
+    logStep('Preparing before Freighter finished', { ok: fresh.ok })
     if (!fresh.ok) {
       busyRef.current = false
+      logStep('Preparing before Freighter failed', { code: fresh.code })
       setFailure(fresh)
       setStatus('failure')
       return
     }
 
     setStatus('awaiting-signature')
+    logStep('Waiting for Freighter')
     const signed = await signPreparedPayment(fresh.value)
+    logStep('Freighter step finished', { ok: signed.ok })
     if (!signed.ok) {
       busyRef.current = false
+      logStep('Freighter signing failed', { code: signed.code })
       setFailure(signed)
       setStatus(signed.code === 'rejected' ? 'rejected' : 'failure')
       return
     }
 
     setStatus('submitting')
+    logStep('Submitting to Horizon')
     const submitted = await submitSignedPayment(signed.value)
+    logStep('Horizon submission finished', { ok: submitted.ok })
     busyRef.current = false
     if (!mountedRef.current) return
     if (!submitted.ok) {
+      logStep('Horizon submission failed', { code: submitted.code })
       setFailure(submitted)
-      setStatus('failure')
+      setStatus(submitted.code === 'timeout' ? 'timed-out' : 'failure')
       return
     }
 
@@ -163,8 +205,9 @@ export function usePayment(input: {
     setReview(null)
     setFailure(null)
     setStatus('success')
+    logStep('Success reached', { hash: submitted.value })
     await refreshBalance().catch(() => undefined)
-  }, [balance, connected, networkPassphrase, refreshBalance, sender, review])
+  }, [balance, connected, logStep, networkPassphrase, refreshBalance, sender, review])
 
   const reset = useCallback(() => {
     if (busyRef.current) return

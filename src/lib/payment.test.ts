@@ -116,8 +116,18 @@ describe('payment validation helpers', () => {
     expect(
       validatePayment({
         sender: SENDER,
-        recipient: SENDER,
+        recipient: '',
         amount: '1',
+        balance: '2',
+        isTestnetConnected: true,
+      }),
+    ).toMatchObject({ code: 'empty-recipient' })
+
+    expect(
+      validatePayment({
+      sender: SENDER,
+      recipient: SENDER,
+      amount: '1',
         balance: '2',
         isTestnetConnected: true,
       }),
@@ -127,11 +137,41 @@ describe('payment validation helpers', () => {
       validatePayment({
         sender: SENDER,
         recipient: RECIPIENT,
+        amount: '',
+        balance: '2',
+        isTestnetConnected: true,
+      }),
+    ).toMatchObject({ code: 'empty-amount' })
+
+    expect(
+      validatePayment({
+        sender: SENDER,
+        recipient: RECIPIENT,
+        amount: '0',
+        balance: '2',
+        isTestnetConnected: true,
+      }),
+    ).toMatchObject({ code: 'non-positive-amount' })
+
+    expect(
+      validatePayment({
+        sender: SENDER,
+        recipient: RECIPIENT,
+        amount: '-1',
+        balance: '2',
+        isTestnetConnected: true,
+      }),
+    ).toMatchObject({ code: 'non-positive-amount' })
+
+    expect(
+      validatePayment({
+        sender: SENDER,
+        recipient: RECIPIENT,
         amount: '1.23456789',
         balance: '2',
         isTestnetConnected: true,
       }),
-    ).toMatchObject({ code: 'invalid-amount' })
+    ).toMatchObject({ code: 'too-many-decimals' })
 
     expect(
       validatePayment({
