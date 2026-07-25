@@ -1,112 +1,214 @@
 # StellarPay Lite
 
-[![CI](https://github.com/Dipak648/stellarpay-lite/actions/workflows/ci.yml/badge.svg)](https://github.com/Dipak648/stellarpay-lite/actions/workflows/ci.yml)
+[![CI](https://github.com/Dipak648/stellarpay-lite/actions/workflows/ci.yml/badge.svg)](https://github.com/Dipak648/stellarpay-lite/actions/workflows/ci.yml) [![Stellar Testnet](https://img.shields.io/badge/Stellar-Testnet-7b61ff)](https://developers.stellar.org/docs/networks)
 
-StellarPay Lite is a responsive payment dApp for the Stellar Testnet. The application lets users connect a Freighter wallet, view their native XLM balance, review a Testnet payment, sign it in Freighter, submit it once to Horizon, and see the resulting transaction feedback and hash.
+StellarPay Lite is a Level 1 Simple Payment dApp for sending native XLM on the Stellar Testnet. It connects Freighter, verifies the Testnet network, displays the active account balance, guides the user through payment review and signing, and reports the confirmed transaction result.
 
-This repository currently contains the responsive interface, real Freighter connection flow, native XLM balance loading from Stellar Testnet, and the Testnet payment review/sign/submit flow.
+## Project description
 
-## Freighter and Testnet
+Users can connect and disconnect Freighter, verify Stellar Testnet, view native XLM, review a payment, sign it through Freighter, submit Testnet XLM to an existing funded recipient, and view success or failure feedback with the transaction hash.
 
-Install the official [Freighter wallet](https://www.freighter.app/) browser extension before running the dApp. In Freighter, open network settings and select **Testnet** before connecting.
+## Level 1 requirements
 
-StellarPay Lite requests access only after you select **Connect Freighter**. The app reads the selected public address and network details; it never requests a private key, secret key, or recovery phrase.
+| Requirement | Status | Implementation |
+| --- | --- | --- |
+| Freighter setup | Implemented | Official installation guidance and Testnet setup instructions |
+| Testnet usage | Implemented | Testnet passphrase is verified before wallet use and signing |
+| Connect wallet | Implemented | Explicit Freighter access request from the Connect button |
+| Disconnect wallet | Implemented | Clears the application session and wallet-change watcher |
+| Fetch XLM balance | Implemented | Native XLM loaded from the Testnet Horizon endpoint |
+| Display balance | Implemented | Decimal-safe balance display with loading, unfunded, and error states |
+| Send XLM | Implemented | One native XLM payment is reviewed, signed, and submitted on Testnet |
+| Success/failure feedback | Implemented | Preparing, signing, submitting, success, rejection, failure, and timeout states |
+| Transaction hash | Implemented | Valid confirmed hash, copy action, and Stellar Expert Testnet link |
+| Public repository | Implemented | [Dipak648/stellarpay-lite](https://github.com/Dipak648/stellarpay-lite) |
+| README documentation | Implemented | Setup, usage, architecture, safety, testing, and limitations documented here |
 
-When you select **Disconnect**, the app clears its own session state and stops wallet-change monitoring. Freighter API 6.0.1 does not expose a supported disconnect or permission-revocation method, so the site may remain authorized inside Freighter. The app does not automatically reconnect after an app-session disconnect.
+## Features
 
-## Payment review and signing
-
-Payment entry is intentionally conservative:
-
-- the recipient address must be a valid Stellar G-address
-- empty recipient and empty amount fields are rejected before signing
-- the amount must be a strict decimal string with at most seven decimal places
-- zero or negative amounts are rejected
-- the amount cannot exceed the spendable balance shown in the app
-- the app builds exactly one native XLM payment operation
-- the review step happens before Freighter opens the signing prompt
-- Freighter signs only after you explicitly confirm the review
-- the signed transaction is submitted once to Horizon
-- repeated clicks are ignored while a submission is already in progress
-- ambiguous failures are not auto-resubmitted
-- the MAX button stays disabled until reserve-aware max calculation exists
-
-The transaction result card uses clear states for preparing, waiting for Freighter, submitting, successful, rejected by user, failed, and timed out. On success, it shows a green success message, the amount sent, the recipient address, the transaction hash, and a Stellar Expert Testnet link.
-
-The transaction result card shows the confirmed Testnet transaction hash, a copy button, and a link to the explorer for verification. In the current UI, that explorer link points to Stellar Expert on Testnet.
-
-## Testnet XLM balance
-
-After a verified Testnet wallet connection, StellarPay Lite loads the account through Horizon and displays only its native XLM balance. Issued assets and trustlines are not treated as XLM. Balance values remain decimal strings, preserving Stellar's seven decimal places without JavaScript floating-point conversion.
-
-The default endpoint is `https://horizon-testnet.stellar.org`. You can select another HTTPS Horizon endpoint in `.env`:
-
-```bash
-VITE_HORIZON_URL=https://horizon-testnet.stellar.org
-```
-
-The endpoint is public configuration and must not contain credentials or secrets.
-
-A valid public address may not exist on the Testnet ledger until it is funded. The UI identifies Horizon 404 responses as unfunded accounts and links to the official Stellar Lab Friendbot instructions. StellarPay Lite does not make Friendbot funding requests.
-
-Payment recipients must already exist on Testnet. Standard XLM payments cannot create the destination account; if the recipient is unfunded, you must fund it first.
-
-## Planned features
-
-- Connect and disconnect a Freighter wallet on Testnet
-- Display the connected account and its XLM balance
-- Send XLM on the Stellar Testnet after an explicit review step
-- Show transaction progress, errors, and success feedback
-- Display and copy the resulting transaction hash
-- Work well across mobile and desktop screen sizes
+- Freighter wallet connection, disconnection, and account/network monitoring
+- Strict decimal-string validation without floating-point transaction amounts
+- Review-before-signing flow
+- Accessible labels, status announcements, and copy feedback
+- Safe Stellar Expert Testnet explorer links
+- Responsive mobile, tablet, and desktop interface
+- Error boundary with a safe recovery screen
+- Automated mocked unit and component tests
+- GitHub Actions CI for lint, tests, coverage, and production builds
 
 ## Technology stack
 
-- React
-- TypeScript
-- Vite
-- Stellar SDK and Freighter API
-- Vitest
+- React 19
+- TypeScript 6
+- Vite 8
+- `@stellar/stellar-sdk` 16
+- `@stellar/freighter-api` 6
+- Stellar Horizon Testnet
+- Vitest 4
 - React Testing Library
-- ESLint
+- GitHub Actions
+
+## Architecture
+
+- `src/components`: semantic UI cards, forms, wallet controls, transaction results, and error boundary.
+- `src/hooks`: wallet, balance, and payment state orchestration.
+- `src/lib`: Freighter, Horizon, payment, validation, and formatting adapters.
+- `src/types`: shared payment hook types.
+- `src/**/*.test.*`: mocked integration, hook, library, and component tests.
+- `.github/workflows/ci.yml`: Node 22 quality workflow for pull requests and `main` pushes.
 
 ## Local setup
 
-Prerequisites: a current Node.js LTS release and npm.
+Prerequisites: Node.js 22 LTS (or a current compatible Node.js release), npm, and a modern browser.
 
 ```bash
 git clone https://github.com/Dipak648/stellarpay-lite.git
 cd stellarpay-lite
-npm install
-cp .env.example .env
+npm ci
+```
+
+Optional environment setup:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Start the development server:
+
+```bash
 npm run dev
 ```
 
-Run the quality checks:
+Create and preview a production build:
 
 ```bash
-npm test
-npm run lint
 npm run build
-npm audit
+npm run preview
 ```
 
-The final local verification currently passes **55 tests**. The suite covers mocked Freighter availability, Testnet verification, connect/disconnect and wallet changes, Horizon balance loading and stale-request handling, native XLM extraction, validation and review cancellation, explicit signing, submission errors, duplicate prevention, transaction receipts and copy actions, accessibility semantics, and the application error boundary. Freighter and Horizon are mocked in tests, so CI never opens a wallet popup, contacts a live network, or submits a transaction.
+## Environment configuration
 
-## Continuous integration
+The optional public configuration is:
 
-GitHub Actions runs on pushes to `main` and pull requests targeting `main`. The Ubuntu job uses Node.js 22, installs with `npm ci`, then runs lint, non-watch tests, coverage, and the production build. It has read-only repository permissions, cancels superseded runs, uses no secrets, and performs no deployment or real Stellar request.
+```text
+VITE_HORIZON_URL=https://horizon-testnet.stellar.org
+```
 
-## Current limitations
+The Testnet endpoint above is the default. Overrides must use HTTPS and cannot contain a username or password; credential-bearing URLs are rejected. This value is not a secret. No private key, secret key, or recovery phrase is needed by the application.
 
-The wallet can connect, its Testnet status can be verified, its native XLM balance can be loaded, and Testnet payments can be reviewed, signed, and submitted. Friendbot funding is still manual, and transaction history is not implemented yet.
+## Freighter setup
 
-## Testnet only
+1. Install [Freighter](https://www.freighter.app/) from the official source.
+2. Create or select a wallet account in the extension.
+3. Select **Stellar Testnet** in Freighter.
+4. Fund the account using an official Testnet method such as [Stellar Lab account tools](https://developers.stellar.org/docs/tools/lab/account).
+5. Never share the wallet recovery phrase or private key.
 
-StellarPay Lite is intended exclusively for the **Stellar Testnet** during development. Testnet assets have no real-world value. Never enter, share, request, or store a wallet secret key or recovery phrase in this application.
+The app requests access only after the user selects **Connect Freighter**. Disconnect clears this app session; Freighter API 6.0.1 does not expose a supported revoke method, so site authorization may remain in the extension.
 
-## Safety and reliability
+## Usage
 
-Wallet requests are bounded by a timeout and are started only from explicit user actions. Horizon and Freighter failures are mapped to short, user-facing messages; raw extension responses, keys, recovery phrases, signed XDR, and account secrets are never displayed or written to production logs. The app uses an application-level error boundary so an unexpected rendering failure produces a safe recovery screen instead of a blank page.
+1. Open the app.
+2. Connect Freighter.
+3. Confirm that Freighter is using Stellar Testnet.
+4. Check the displayed native XLM balance.
+5. Enter a funded Testnet recipient address.
+6. Enter an amount with no more than seven decimal places.
+7. Review the sender, recipient, amount, fee, and network.
+8. Confirm the signing request in Freighter.
+9. Wait for Horizon to confirm the submission.
+10. Open the confirmed transaction in Stellar Expert Testnet.
 
-The payment flow rechecks the active public address and Testnet passphrase immediately before signing, prevents duplicate submissions, and never retries an ambiguous Horizon submission automatically. A successful result is shown only when Horizon returns a valid transaction hash.
+## Transaction lifecycle
+
+The app validates the address, amount, sender, balance, and Testnet state; prepares a fresh transaction for review; rechecks the wallet immediately before signing; requests an explicit Freighter signature; submits the signed transaction once to Horizon; requires a valid transaction hash for confirmation; and refreshes the balance only after confirmed success.
+
+## Error handling
+
+Common user-facing states include:
+
+- Freighter unavailable or locked: install or unlock Freighter, then check again.
+- Wrong network: switch Freighter to Stellar Testnet.
+- Invalid address or amount: correct the Stellar G-address or decimal amount.
+- Unfunded recipient: fund the destination first; a standard payment cannot create it.
+- Insufficient balance or reserve: reduce the amount so the payment, fee, and reserve remain covered.
+- Signature rejected: approve the request in Freighter or review again.
+- Sequence error: prepare and sign a new transaction.
+- Timeout: wait for the network and review a new payment.
+- Horizon unavailable: retry later; ambiguous submission failures are never automatically retried.
+
+## Security
+
+- Testnet only; Testnet assets have no real-world value.
+- No secret key or recovery phrase handling.
+- Freighter performs transaction signing.
+- Stellar Testnet network passphrase is checked before wallet use and signing.
+- Transaction amounts remain decimal strings rather than JavaScript floating-point values.
+- Ambiguous Horizon submissions are not automatically resubmitted.
+- User-facing errors and development logs are sanitized.
+- Horizon configuration requires HTTPS and rejects credential-bearing URLs.
+- Dependencies are checked with `npm audit`.
+
+## Testing
+
+```bash
+npm test -- --run
+npm run test:watch
+npm run test:coverage
+npm run lint
+npm run build
+```
+
+The current suite has **55 passing tests**. Wallet, payment, and balance tests mock Freighter and Horizon; tests never open a wallet popup, call a live Horizon service, or submit a transaction. Coverage thresholds are 75% statements, 70% branches, 78% functions, and 75% lines.
+
+## CI/CD
+
+GitHub Actions runs on pushes to `main` and pull requests targeting `main`. It uses Ubuntu with Node.js 22, installs with `npm ci`, then runs lint, non-watch tests, coverage, and the production build. The workflow uses read-only repository permissions, requires no wallet secrets, performs no deployment, and never submits a Stellar transaction. Deployment instructions and a live URL will be added in Phase 11.
+
+## Screenshots
+
+Screenshots are intentionally not fabricated. Final submission screenshots will be added after deployment testing for:
+
+- Wallet connected
+- XLM balance displayed
+- Successful transaction result
+- Mobile responsive view
+
+## Known limitations
+
+- Stellar Testnet only.
+- Native XLM payments only; issued assets are not supported.
+- Standard payments require an existing funded recipient account.
+- Application disconnect does not revoke Freighter site authorization.
+- Transaction history is not implemented.
+- Ambiguous submission failures are not automatically retried.
+
+## Project structure
+
+```text
+.
+├── .github/workflows/ci.yml
+├── src/
+│   ├── components/
+│   ├── hooks/
+│   ├── lib/
+│   ├── test/
+│   ├── types/
+│   ├── App.tsx
+│   └── main.tsx
+├── .env.example
+├── eslint.config.js
+├── package.json
+├── vite.config.ts
+└── README.md
+```
+
+`node_modules`, `dist`, and `coverage` are generated or local-only directories and are excluded from this tree.
+
+## License
+
+No license file has been selected in the repository. The `package.json` metadata currently contains `MIT`, but no license text is included; licensing should be finalized separately.
+
+## Testnet-only notice
+
+StellarPay Lite is intended exclusively for the **Stellar Testnet** during development. Never enter, share, request, or store a wallet secret key or recovery phrase in this application.
