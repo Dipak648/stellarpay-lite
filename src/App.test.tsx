@@ -19,6 +19,10 @@ const freighterMock = vi.hoisted(() => ({
   stop: vi.fn(),
 }))
 
+const horizonMock = vi.hoisted(() => ({
+  loadNativeXlmBalance: vi.fn(),
+}))
+
 vi.mock('@stellar/freighter-api', () => ({
   isConnected: freighterMock.isConnected,
   requestAccess: freighterMock.requestAccess,
@@ -36,10 +40,22 @@ vi.mock('@stellar/freighter-api', () => ({
   },
 }))
 
+vi.mock('./lib/horizon', () => ({
+  loadNativeXlmBalance: horizonMock.loadNativeXlmBalance,
+}))
+
 const PUBLIC_ADDRESS =
   'GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAWHF'
 const SECOND_ADDRESS =
   'GBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBBM7'
+
+function deferred<T>() {
+  let resolve!: (value: T) => void
+  const promise = new Promise<T>((promiseResolve) => {
+    resolve = promiseResolve
+  })
+  return { promise, resolve }
+}
 
 function mockSuccessfulFreighter() {
   freighterMock.isConnected.mockResolvedValue({ isConnected: true })
@@ -67,6 +83,10 @@ beforeEach(() => {
   vi.clearAllMocks()
   freighterMock.watchCallbacks.length = 0
   mockSuccessfulFreighter()
+  horizonMock.loadNativeXlmBalance.mockResolvedValue({
+    status: 'funded',
+    balance: '125.0000000',
+  })
 })
 
 describe('StellarPay Lite wallet connection', () => {
@@ -147,6 +167,7 @@ describe('StellarPay Lite wallet connection', () => {
     expect(
       screen.getByRole('button', { name: 'Check Testnet again' }),
     ).toBeEnabled()
+    expect(horizonMock.loadNativeXlmBalance).not.toHaveBeenCalled()
   })
 
   it('sanitizes unexpected extension errors', async () => {
@@ -203,6 +224,7 @@ describe('StellarPay Lite wallet connection', () => {
     expect(
       screen.getByRole('button', { name: 'Review Payment' }),
     ).toBeDisabled()
+    expect(horizonMock.loadNativeXlmBalance).not.toHaveBeenCalled()
   })
 
   it('unlocks payment fields only after a verified Testnet connection', async () => {
@@ -218,7 +240,7 @@ describe('StellarPay Lite wallet connection', () => {
       screen.getByRole('button', { name: 'Review Payment' }),
     ).toBeDisabled()
     expect(
-      screen.getByText(/Balance fetching will be added/i),
+      await screen.findByText(/Native XLM on Stellar Testnet/i),
     ).toBeInTheDocument()
   })
 
@@ -252,6 +274,169 @@ describe('StellarPay Lite wallet connection', () => {
     ).toBeDisabled()
     expect(freighterMock.requestAccess).toHaveBeenCalledTimes(1)
     expect(freighterMock.stop).toHaveBeenCalledTimes(1)
+  })
+
+  it('fetches and displays the native balance automatically after connection', async () => {
+    horizonMock.loadNativeXlmBalance.mockResolvedValue({
+      status: 'funded',
+      balance: '987654321.1234567',
+    })
+    render(<App />)
+
+    await connectWallet()
+
+    expect(horizonMock.loadNativeXlmBalance).toHaveBeenCalledWith(
+      PUBLIC_ADDRESS,
+    )
+    expect(
+      await screen.findByText('987,654,321.1234567'),
+    ).toBeInTheDocument()
+  })
+
+  it('announces the balance loading state', async () => {
+    const pending = deferred<{ status: 'funded'; balance: string }>()
+    horizonMock.loadNativeXlmBalance.mockReturnValue(pending.promise)
+    render(<App />)
+
+    await connectWallet()
+
+    expect(
+      await screen.findByText('Loading the native XLM balance…'),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Refreshing XLM balance' }),
+    ).toBeDisabled()
+
+    pending.resolve({ status: 'funded', balance: '10.0000000' })
+    expect(await screen.findByText('10.0000000')).toBeInTheDocument()
+  })
+
+  it('refreshes the connected account balance manually', async () => {
+    render(<App />)
+    const user = await connectWallet()
+    await screen.findByText('125.0000000')
+
+    horizonMock.loadNativeXlmBalance.mockResolvedValue({
+      status: 'funded',
+      balance: '126.5000000',
+    })
+    await user.click(
+      screen.getByRole('button', { name: 'Refresh XLM balance' }),
+    )
+
+    expect(
+      await screen.findByText('126.5000000'),
+    ).toBeInTheDocument()
+    expect(horizonMock.loadNativeXlmBalance).toHaveBeenCalledTimes(2)
+  })
+
+  it('shows unfunded Testnet guidance without requesting Friendbot funds', async () => {
+    horizonMock.loadNativeXlmBalance.mockResolvedValue({ status: 'unfunded' })
+    render(<App />)
+
+    await connectWallet()
+
+    expect(
+      await screen.findByText(/valid Testnet address has not been funded/i),
+    ).toBeInTheDocument()
+    expect(
+      screen.getByRole('link', { name: /fund it with Friendbot/i }),
+    ).toHaveAttribute(
+      'href',
+      'https://developers.stellar.org/docs/tools/lab/account',
+    )
+  })
+
+  it('shows a network error and retries on request', async () => {
+    horizonMock.loadNativeXlmBalance.mockResolvedValueOnce({
+      status: 'error',
+      reason: 'network',
+      message: 'The Testnet balance service is temporarily unavailable.',
+    })
+    render(<App />)
+    const user = await connectWallet()
+
+    expect(
+      await screen.findByText(/temporarily unavailable/i),
+    ).toBeInTheDocument()
+
+    horizonMock.loadNativeXlmBalance.mockResolvedValueOnce({
+      status: 'funded',
+      balance: '42.0000000',
+    })
+    await user.click(screen.getByRole('button', { name: 'Retry balance' }))
+
+    expect(await screen.findByText('42.0000000')).toBeInTheDocument()
+    expect(horizonMock.loadNativeXlmBalance).toHaveBeenCalledTimes(2)
+  })
+
+  it('clears the visible balance immediately on disconnect', async () => {
+    render(<App />)
+    const user = await connectWallet()
+    await screen.findByText('125.0000000')
+
+    await user.click(screen.getByRole('button', { name: 'Disconnect' }))
+
+    expect(screen.queryByText('125.0000000')).not.toBeInTheDocument()
+    expect(screen.getByLabelText('Balance unavailable')).toBeInTheDocument()
+    expect(
+      screen.getByRole('button', { name: 'Refresh XLM balance' }),
+    ).toBeDisabled()
+  })
+
+  it('clears the old account balance and loads the new active account', async () => {
+    horizonMock.loadNativeXlmBalance.mockImplementation(async (address) => ({
+      status: 'funded',
+      balance: address === PUBLIC_ADDRESS ? '11.0000000' : '22.0000000',
+    }))
+    render(<App />)
+    await connectWallet()
+    await screen.findByText('11.0000000')
+    await waitFor(() => expect(freighterMock.watchCallbacks).toHaveLength(1))
+
+    act(() => {
+      freighterMock.watchCallbacks[0]({
+        address: SECOND_ADDRESS,
+        network: 'TESTNET',
+        networkPassphrase: Networks.TESTNET,
+      })
+    })
+
+    expect(screen.queryByText('11.0000000')).not.toBeInTheDocument()
+    expect(await screen.findByText('22.0000000')).toBeInTheDocument()
+    expect(horizonMock.loadNativeXlmBalance).toHaveBeenLastCalledWith(
+      SECOND_ADDRESS,
+    )
+  })
+
+  it('prevents a stale account response from replacing the current balance', async () => {
+    const firstRequest =
+      deferred<{ status: 'funded'; balance: string }>()
+    const secondRequest =
+      deferred<{ status: 'funded'; balance: string }>()
+    horizonMock.loadNativeXlmBalance.mockImplementation((address) =>
+      address === PUBLIC_ADDRESS ? firstRequest.promise : secondRequest.promise,
+    )
+    render(<App />)
+    await connectWallet()
+    await waitFor(() => expect(freighterMock.watchCallbacks).toHaveLength(1))
+
+    act(() => {
+      freighterMock.watchCallbacks[0]({
+        address: SECOND_ADDRESS,
+        network: 'TESTNET',
+        networkPassphrase: Networks.TESTNET,
+      })
+    })
+
+    firstRequest.resolve({ status: 'funded', balance: '999.0000000' })
+    await act(async () => {
+      await firstRequest.promise
+    })
+    expect(screen.queryByText('999.0000000')).not.toBeInTheDocument()
+
+    secondRequest.resolve({ status: 'funded', balance: '5.5000000' })
+    expect(await screen.findByText('5.5000000')).toBeInTheDocument()
   })
 
   it('preserves the transaction and Testnet safety notices', async () => {

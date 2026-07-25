@@ -337,6 +337,45 @@ h2 {
   margin-bottom: 0;
 }
 
+.balance-status {
+  min-height: 4.15rem;
+}
+
+.balance-loading {
+  display: inline-block;
+  min-width: 1.2em;
+  color: var(--purple-400);
+  letter-spacing: 0.08em;
+}
+
+.refreshing-icon {
+  display: inline-block;
+  animation: refresh-spin 900ms linear infinite;
+}
+
+.balance-guidance .card-copy,
+.balance-error .card-copy {
+  margin-bottom: 0.65rem;
+}
+
+.balance-guidance a {
+  color: #c9beff;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-underline-offset: 0.2rem;
+}
+
+.retry-button {
+  min-height: 2.25rem;
+  padding: 0.4rem 0.7rem;
+  color: #ffd5d9;
+  font-size: 0.75rem;
+  font-weight: 750;
+  background: rgb(255 109 122 / 12%);
+  border: 1px solid rgb(255 109 122 / 22%);
+  border-radius: 0.55rem;
+}
+
 .wallet-status {
   min-height: 9.7rem;
 }
@@ -421,6 +460,12 @@ h2 {
   font-size: 1.2rem;
   background: var(--navy-800);
   border-radius: 0.7rem;
+}
+
+@keyframes refresh-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .payment-card form {
@@ -646,5 +691,9 @@ fieldset {
   *::after {
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
+  }
+
+  .refreshing-icon {
+    animation: none;
   }
 }
