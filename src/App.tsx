@@ -5,12 +5,20 @@ import { PaymentForm } from './components/PaymentForm'
 import { TransactionResult } from './components/TransactionResult'
 import { WalletCard } from './components/WalletCard'
 import { useBalance } from './hooks/useBalance'
+import { usePayment } from './hooks/usePayment'
 import { useWallet } from './hooks/useWallet'
 
 function App() {
   const wallet = useWallet()
   const isWalletConnected = wallet.status === 'connected'
   const balance = useBalance(wallet.publicAddress, isWalletConnected)
+  const payment = usePayment({
+    sender: wallet.publicAddress,
+    networkPassphrase: wallet.network?.passphrase ?? null,
+    balance: balance.balance,
+    connected: isWalletConnected,
+    refreshBalance: balance.refresh,
+  })
 
   return (
     <div className="app-shell">
@@ -24,9 +32,9 @@ function App() {
               {...balance}
             />
           </div>
-          <PaymentForm isWalletConnected={isWalletConnected} />
+          <PaymentForm isWalletConnected={isWalletConnected} payment={payment} />
         </section>
-        <TransactionResult />
+        <TransactionResult payment={payment} />
       </main>
       <Footer />
     </div>

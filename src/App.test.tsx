@@ -219,7 +219,7 @@ describe('StellarPay Lite wallet connection', () => {
     expect(
       screen.getByRole('textbox', { name: 'Recipient Stellar address' }),
     ).toBeDisabled()
-    expect(screen.getByRole('spinbutton', { name: 'Amount' })).toBeDisabled()
+    expect(screen.getByRole('textbox', { name: 'Amount' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'MAX' })).toBeDisabled()
     expect(
       screen.getByRole('button', { name: 'Review Payment' }),
@@ -234,11 +234,11 @@ describe('StellarPay Lite wallet connection', () => {
     expect(
       screen.getByRole('textbox', { name: 'Recipient Stellar address' }),
     ).toBeEnabled()
-    expect(screen.getByRole('spinbutton', { name: 'Amount' })).toBeEnabled()
-    expect(screen.getByRole('button', { name: 'MAX' })).toBeEnabled()
+    expect(screen.getByRole('textbox', { name: 'Amount' })).toBeEnabled()
+    expect(screen.getByRole('button', { name: 'MAX' })).toBeDisabled()
     expect(
       screen.getByRole('button', { name: 'Review Payment' }),
-    ).toBeDisabled()
+    ).toBeEnabled()
     expect(
       await screen.findByText(/Native XLM on Stellar Testnet/i),
     ).toBeInTheDocument()
@@ -444,7 +444,7 @@ describe('StellarPay Lite wallet connection', () => {
     await waitForDisconnected()
 
     expect(
-      screen.getByText(/transaction status and the Testnet transaction hash/i),
+      screen.getByText(/confirmed Testnet transaction details and hash/i),
     ).toBeInTheDocument()
     expect(screen.getByText('Built on Stellar Testnet')).toBeInTheDocument()
     expect(

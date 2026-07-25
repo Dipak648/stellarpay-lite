@@ -559,6 +559,80 @@ fieldset {
   font-size: 0.6rem;
 }
 
+.review-panel {
+  margin-top: 1.25rem;
+  padding: 1.1rem;
+  background: #090d20;
+  border: 1px solid rgb(156 135 255 / 30%);
+  border-radius: 0.85rem;
+}
+
+.review-panel h3 {
+  margin: 0 0 1rem;
+}
+
+.review-panel dl {
+  display: grid;
+  gap: 0.65rem;
+  margin: 0;
+}
+
+.review-panel dl div {
+  display: grid;
+  grid-template-columns: 7rem minmax(0, 1fr);
+  gap: 0.75rem;
+}
+
+.review-panel dt {
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.review-panel dd {
+  min-width: 0;
+  margin: 0;
+  overflow-wrap: anywhere;
+  text-align: right;
+}
+
+.review-actions,
+.result-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.65rem;
+  margin-top: 1rem;
+}
+
+.review-actions {
+  justify-content: flex-end;
+}
+
+.result-content {
+  min-width: 0;
+  flex: 1;
+}
+
+.hash-value {
+  display: block;
+  margin-top: 0.75rem;
+  overflow-wrap: anywhere;
+  color: #c8f7e2;
+}
+
+.result-actions a,
+.result-actions button {
+  padding: 0.5rem 0.7rem;
+  color: #dcd4ff;
+  font-size: 0.76rem;
+  font-weight: 700;
+  background: var(--navy-800);
+  border-radius: 0.55rem;
+}
+
+.result-actions a {
+  text-decoration: none;
+}
+
 .transaction-result {
   display: flex;
   align-items: center;
@@ -682,6 +756,15 @@ fieldset {
 
   .transaction-result {
     align-items: flex-start;
+  }
+
+  .review-panel dl div {
+    grid-template-columns: 1fr;
+    gap: 0.2rem;
+  }
+
+  .review-panel dd {
+    text-align: left;
   }
 }
 

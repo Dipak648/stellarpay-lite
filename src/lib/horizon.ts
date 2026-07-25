@@ -48,7 +48,7 @@ export function resolveHorizonUrl(override?: string): string {
 
 let horizonClient: Horizon.Server | null = null
 
-function getHorizonClient(): Horizon.Server {
+export function getHorizonClient(): Horizon.Server {
   if (!horizonClient) {
     const url = resolveHorizonUrl(import.meta.env.VITE_HORIZON_URL)
     horizonClient = new Horizon.Server(url)
