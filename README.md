@@ -2,7 +2,7 @@
 
 StellarPay Lite is a responsive payment dApp for the Stellar Testnet. The finished application will let users connect a Freighter wallet, view their XLM balance, send Testnet XLM, and receive clear transaction feedback.
 
-This repository currently contains the Phase 2 project foundation. Wallet connection, balance fetching, and payment transactions are intentionally not implemented yet.
+This repository currently contains the Phase 3 responsive interface. Wallet connection, balance fetching, and payment transactions are intentionally not implemented yet, so wallet-dependent controls remain disabled.
 
 ## Planned features
 
