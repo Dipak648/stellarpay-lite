@@ -1,6 +1,6 @@
 # StellarPay Lite
 
-[![CI](https://github.com/Dipak648/stellarpay-lite/actions/workflows/ci.yml/badge.svg)](https://github.com/Dipak648/stellarpay-lite/actions/workflows/ci.yml) [![Stellar Testnet](https://img.shields.io/badge/Stellar-Testnet-7b61ff)](https://developers.stellar.org/docs/networks)
+[![CI](https://github.com/Dipak648/stellarpay-lite/actions/workflows/ci.yml/badge.svg)](https://github.com/Dipak648/stellarpay-lite/actions/workflows/ci.yml) [![Live Demo](https://img.shields.io/badge/Live%20Demo-StellarPay%20Lite-7b61ff)](https://stellarpay-lite-umber.vercel.app) [![Stellar Testnet](https://img.shields.io/badge/Stellar-Testnet-7b61ff)](https://developers.stellar.org/docs/networks)
 
 StellarPay Lite is a Level 1 Simple Payment dApp for sending native XLM on the Stellar Testnet. It connects Freighter, verifies the Testnet network, displays the active account balance, guides the user through payment review and signing, and reports the confirmed transaction result.
 
@@ -163,16 +163,49 @@ The current suite has **55 passing tests**. Wallet, payment, and balance tests m
 
 ## CI/CD
 
-GitHub Actions runs on pushes to `main` and pull requests targeting `main`. It uses Ubuntu with Node.js 22, installs with `npm ci`, then runs lint, non-watch tests, coverage, and the production build. The workflow uses read-only repository permissions, requires no wallet secrets, performs no deployment, and never submits a Stellar transaction. Deployment instructions and a live URL will be added in Phase 11.
+GitHub Actions runs on pushes to `main` and pull requests targeting `main`. It uses Ubuntu with Node.js 22, installs with `npm ci`, then runs lint, non-watch tests, coverage, and the production build. The workflow uses read-only repository permissions, requires no wallet secrets, and never submits a Stellar transaction.
+
+## Deployment
+
+The production application is available at [stellarpay-lite-umber.vercel.app](https://stellarpay-lite-umber.vercel.app). It remains strictly Testnet-only; no Mainnet deployment or Mainnet support is claimed.
+
+## Verified Testnet Transaction
+
+The following successful transaction was verified on Stellar Testnet:
+
+- **Amount:** 10 XLM
+- **Transaction hash:** `b9bb8bca189cf58a907711ffb6872edca31b168dcc55aa96dc48e6d6dda70e43`
+- **Explorer:** [View on Stellar Expert Testnet](https://stellar.expert/explorer/testnet/tx/b9bb8bca189cf58a907711ffb6872edca31b168dcc55aa96dc48e6d6dda70e43)
+
+**Testnet only:** this transaction uses test assets with no real-world value.
 
 ## Screenshots
 
-Screenshots are intentionally not fabricated. Final submission screenshots will be added after deployment testing for:
+Evidence from the deployed Testnet application and its automated quality checks:
 
-- Wallet connected
-- XLM balance displayed
-- Successful transaction result
-- Mobile responsive view
+### Wallet connected
+
+![StellarPay Lite wallet connected on Testnet](docs/screenshots/wallet-connected.png)
+
+### XLM balance
+
+![Native XLM balance displayed on Stellar Testnet](docs/screenshots/xlm-balance.png)
+
+### Successful Testnet transaction
+
+![Successful 10 XLM Testnet transaction result](docs/screenshots/successful-transaction.png)
+
+### Mobile responsive UI
+
+![StellarPay Lite responsive mobile interface](docs/screenshots/mobile-responsive.png)
+
+### GitHub Actions
+
+![GitHub Actions CI workflow completed successfully](docs/screenshots/github-actions.png)
+
+### Automated tests
+
+![Automated test suite passing](docs/screenshots/tests-passing.png)
 
 ## Known limitations
 
